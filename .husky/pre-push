@@ -1,0 +1,9 @@
+# Slower checks than pre-commit: the same ones CI runs on the pull request.
+# Base for `nx affected`: origin/staging, else origin/main; on the very first push (no remote branch yet) check everything.
+pnpm format:check || exit 1
+base=$(git rev-parse --verify -q origin/staging || git rev-parse --verify -q origin/main || true)
+if [ -n "$base" ]; then
+  pnpm nx affected -t lint typecheck test --base="$base" --head=HEAD
+else
+  pnpm nx run-many -t lint typecheck test
+fi

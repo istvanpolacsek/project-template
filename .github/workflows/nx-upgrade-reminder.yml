@@ -1,0 +1,32 @@
+# Dependabot ignores nx and @nx/* (they must move together through `nx migrate`), so this opens a reminder
+# issue when a newer Nx exists. The issue goes through the normal ticket flow: plan, `pnpm nx migrate latest`, PR.
+name: Nx upgrade reminder
+
+on:
+  schedule:
+    - cron: '0 7 1 * *' # first of the month
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Compare versions and open an issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          current=$(node -p "require('./package.json').devDependencies.nx.replace(/^[^0-9]*/, '')")
+          latest=$(npm view nx version)
+          echo "nx: current $current, latest $latest"
+          if [ "$current" = "$latest" ]; then exit 0; fi
+          title="Upgrade Nx to $latest"
+          existing=$(gh issue list --state open --search "\"$title\" in:title" --json number --jq 'length')
+          if [ "$existing" != "0" ]; then echo "already open"; exit 0; fi
+          gh issue create --title "$title" --body "Nx is at $current, the latest is $latest.
+
+          Run \`pnpm nx migrate latest\`, then \`pnpm install && pnpm nx migrate --run-migrations\`, check the changes and delete \`migrations.json\`. Release notes: https://github.com/nrwl/nx/releases"

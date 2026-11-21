@@ -1,0 +1,23 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    target-branch: staging
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: 'chore(deps)'
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+    # nx and @nx/* are upgraded together with `pnpm nx migrate latest`
+    ignore:
+      - dependency-name: nx
+      - dependency-name: '@nx/*'
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: staging
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: 'ci(deps)'

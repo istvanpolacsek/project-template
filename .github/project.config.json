@@ -1,0 +1,12 @@
+{
+  "owner": "OWNER",
+  "ownerType": "user",
+  "repo": "OWNER/REPO",
+  "project": { "number": 1, "title": "REPO" },
+  "branches": { "production": "main", "staging": "staging" },
+  "statuses": ["Todo", "In Progress", "In Review", "On Stage", "On Prod", "Done"],
+  "issueTypes": ["Task", "Bug", "Feature"],
+  "typeMode": "label",
+  "secondaryLanguage": null,
+  "keepOpenLabel": "keep-open"
+}

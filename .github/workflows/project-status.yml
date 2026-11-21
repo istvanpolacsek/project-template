@@ -1,0 +1,44 @@
+# Moves the issues a merged PR names to `On Stage` (merged into staging) or `On Prod` (merged into main).
+# Token: organisation repos use a GitHub App (vars.BOT_APP_ID + secrets.BOT_APP_PRIVATE_KEY, permission
+# "Projects: read and write"); personal accounts cannot use an App for Projects, so they use secrets.PROJECT_TOKEN
+# (classic PAT, scopes `project` and `repo`). `pnpm bootstrap` explains which one applies.
+# GitHub's built-in project workflow "Pull request merged" must stay OFF, or it would set Done on a staging merge.
+name: Project status
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main, staging]
+
+permissions:
+  contents: read
+
+jobs:
+  set-status:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: .github
+
+      - name: GitHub App token
+        id: app-token
+        if: ${{ vars.BOT_APP_ID != '' }}
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
+
+      - name: Move referenced issues on the board
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token || secrets.PROJECT_TOKEN }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::warning::No project token (BOT_APP_ID or PROJECT_TOKEN); board not updated."
+            exit 0
+          fi
+          node .github/scripts/project-status.mjs \
+            --repo "${{ github.repository }}" \
+            --pr "${{ github.event.pull_request.number }}" \
+            --base "${{ github.event.pull_request.base.ref }}"

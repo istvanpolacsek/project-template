@@ -1,0 +1,106 @@
+{
+  "extraKnownMarketplaces": {
+    "nx-claude-plugins": {
+      "source": {
+        "source": "github",
+        "repo": "nrwl/nx-ai-agents-config"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "nx@nx-claude-plugins": true
+  },
+  "permissions": {
+    "ask": ["Bash(gh pr create*)", "Bash(gh pr edit*)", "Bash(git push*)"]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/format.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "EnterPlanMode",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/plan-task-context.mjs",
+            "timeout": 20
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/pr-created-status.mjs",
+            "timeout": 30,
+            "if": "Bash(gh pr create*)"
+          }
+        ]
+      },
+      {
+        "matcher": "ExitPlanMode",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/plan-approved-setup.mjs",
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/plan-task-context.mjs",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "ExitPlanMode",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/plan-exit-gate.mjs",
+            "timeout": 20
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/commit-msg-gate.mjs",
+            "timeout": 20,
+            "if": "Bash(git commit*)"
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/pr-create-gate.mjs",
+            "timeout": 20,
+            "if": "Bash(gh pr create*)"
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/push-guard.mjs",
+            "timeout": 20,
+            "if": "Bash(git push*)"
+          }
+        ]
+      }
+    ]
+  }
+}
