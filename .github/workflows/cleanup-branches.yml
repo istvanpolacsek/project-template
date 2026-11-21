@@ -1,0 +1,35 @@
+# Deletes the head branch of a merged PR. Never `main` or `staging` (the release PR has `staging` as its head),
+# so GitHub's own "delete branch on merge" must stay OFF in the repo settings.
+name: Cleanup branches
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main, staging]
+
+permissions:
+  contents: write
+
+jobs:
+  delete-head-branch:
+    if: >
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref != 'staging' &&
+      github.event.pull_request.head.ref != 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete head branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          if output=$(gh api -X DELETE "repos/$REPO/git/refs/heads/$HEAD_REF" 2>&1); then
+            echo "Deleted $HEAD_REF"
+          elif echo "$output" | grep -q 'Reference does not exist'; then
+            echo "$HEAD_REF is already deleted"
+          else
+            echo "$output"
+            exit 1
+          fi

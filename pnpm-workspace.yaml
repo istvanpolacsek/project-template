@@ -1,0 +1,7 @@
+packages:
+  - 'packages/*'
+# pnpm 11 fails the install when a dependency has an unapproved build script (CI hits this on a fresh install).
+# Approve what is needed here; `pnpm approve-builds --all` approves whatever is pending.
+allowBuilds:
+  '@swc/core': true
+  nx: false

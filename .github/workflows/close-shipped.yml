@@ -1,0 +1,59 @@
+# Closes the issues a successful production deployment shipped: only issues the board shows as `On Prod`
+# and without the `keep-open` label (see .github/scripts/close-shipped.mjs).
+#
+# Vercel reports a deployment to GitHub in one of two ways, depending on the project:
+#   - `deployment_status` events (GitHub Deployments, environment `Production`), or
+#   - a commit status with the context `Vercel`.
+# Both trigger this workflow; whichever fires first closes the issues, the other finds nothing left to close.
+# `workflow_dispatch` runs it by hand for a commit (retry, backfill). A `status` / `deployment_status`
+# workflow runs from the default branch's copy of this file.
+name: Close shipped issues
+
+on:
+  deployment_status:
+  status:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: The deployed main commit (the tip of main when empty)
+        required: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  close:
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'deployment_status' &&
+        github.event.deployment_status.state == 'success' &&
+        github.event.deployment.environment == 'Production') ||
+      (github.event_name == 'status' &&
+        github.event.state == 'success' &&
+        github.event.context == 'Vercel' &&
+        contains(github.event.branches.*.name, 'main'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: .github
+
+      - name: GitHub App token
+        id: app-token
+        if: ${{ vars.BOT_APP_ID != '' }}
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
+
+      - name: Close the issues this deployment shipped
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token || secrets.PROJECT_TOKEN }}
+          SHA: ${{ github.event.deployment.sha || github.event.sha || inputs.sha || github.sha }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::warning::No project token (BOT_APP_ID or PROJECT_TOKEN); nothing closed."
+            exit 0
+          fi
+          node .github/scripts/close-shipped.mjs --repo "${{ github.repository }}" --sha "$SHA"

@@ -1,0 +1,7 @@
+/dist
+/coverage
+/.nx
+/tmp
+/.claude/worktrees
+pnpm-lock.yaml
+CLAUDE.md
